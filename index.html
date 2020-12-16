@@ -1,7 +1,181 @@
-<!DOCTYPE html>
 <html>
+<head>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.min.js"></script>
+  
+
+  <script type="text/javascript">
+/*jshint esversion: 6 */
+
+
+// graph works on all with h tips
+
+var gameCount = 25;
+var gameNumber = 0;
+let prevHash = null;
+let shash = "657859ae718a6fc61ad921611eec61f9e0d2d6a1eef857e33467524f06ec3d2a";
+let gameData = [];
+let multiList = [2,5,10];
+let wager = 100;
+let startBalance = 10000;
+
+let bust = 0;
+let curBal = [];
+let bal = [];
+let myData = [];
+let hashList = [];
+let revNum = gameCount;
+let two = startBalance;
+let five = startBalance;
+let ten = startBalance;
+buildHashes(gameCount);
+runIt(hashList.length);
+function buildHashes(gameCount){
+	
+	for (var i = 0; i <= gameCount - 1; i++) {
+		
+		
+		let hash = String(prevHash ? CryptoJS.SHA256(String(prevHash)) : shash);
+		let bust = gameResult(CryptoJS.enc.Hex.parse(hash), '0000000000000000004d6ec16dafe9d8370958664c1dc422f452892264c59526');
+		hashList.unshift([hash,bust]);
+		
+		prevHash = hash;
+		
+	}
+	//hashList.forEach(element  => console.log(`HL: ${element}`));
+	
+	
+}
+function gameResult(seed,salt) {
+    const nBits = 52; // number of most significant bits to use
+	
+	// 1. HMAC_SHA256(message=seed, key=salt)  
+	const hmac = CryptoJS.HmacSHA256(seed, salt);
+	seed = hmac.toString(CryptoJS.enc.Hex);
+	
+	// 2. r = 52 most significant bits
+	seed = seed.slice(0, nBits / 4);
+	const r = parseInt(seed, 16);
+	
+	// 3. X = r / 2^52
+	let X = r / Math.pow(2, nBits); // uniformly distributed in [0; 1)
+	
+	// 4. X = 99 / (1-X)
+	X = 99 / (1 - X);
+	
+	// 5. return max(trunc(X), 100)
+	const result = Math.floor(X);
+	return Math.max(1, result / 100);
+}
+
+function chgBal(bust){
+	
+	for (var i = 0; i <= multiList.length - 1; i++) {
+		if (bust < multiList[i]) { curBal[i] -= rb(wager); } else { curBal[i] += rb((wager * multiList[i]) - wager); }
+		
+	}
+	
+}
+
+function runIt(gameCount){
+	
+	//multiList.forEach(element  => gameData[0].push([startBalance]));
+	multiList.forEach(element  => curBal.push([startBalance]));
+	
+	for (var i = 0; i <= gameCount - 1; i++) {
+		
+		gameNumber++;
+		let hash = hashList[i][0];
+		let bust = hashList[i][1];
+		//let hash = String(prevHash ? CryptoJS.SHA256(String(prevHash)) : shash);
+		//let bust = gameResult(CryptoJS.enc.Hex.parse(hash), '0000000000000000004d6ec16dafe9d8370958664c1dc422f452892264c59526');
+		let test = chgBal(bust);
+		gameData.push([gameNumber,hash,bust,[]]);
+		revNum--;
+		
+		
+		curBal.forEach(element  => gameData[i][3].push(element));
+		let myTip = gameData[i][3][0];
+		//myData.push([gameData[i][0],gameData[i][3][0],'B=' + gameData[i][2] + '--- Bal=' + myTip + '',gameData[i][3][1],gameData[i][3][1],gameData[i][3][2],gameData[i][3][2]]);
+		myData.push([gameData[i][0],gameData[i][3][0],createTip(gameData[i][0], gameData[i][2], gameData[i][1], gameData[i][3][0]),gameData[i][3][1],createTip(gameData[i][0], gameData[i][2], gameData[i][1], gameData[i][3][1]),gameData[i][3][2],createTip(gameData[i][0], gameData[i][2], gameData[i][1], gameData[i][3][2])]);
+	
+		
+		
+		prevHash = hash;
+		
+	}
+	
+	
+	//gameData.forEach(element  => console.log(`data: ${element}`));
+	//for (var i = 0; i <= myData.length - 1; i++) {
+		//console.log(`fordata: ${myData[i]}`);
+//}
+	
+}
+function rb(bet){
+	return Math.round(bet / 100);
+	
+}
+
+google.charts.load('current', {'packages':['corechart']});
+google.charts.setOnLoadCallback(drawChart);
+
+function drawChart() {
+	//console.log(`chart = ${gameData[1][2][0]} `)
+	var data = new google.visualization.DataTable();
+	data.addColumn('number', 'Day');
+	data.addColumn('number', '2x');
+	//data.addColumn({type: 'string', role: 'tooltip'});
+	data.addColumn({'type': 'string', 'role': 'tooltip', 'p': {'html': true}});
+	data.addColumn('number', '5x');
+	//data.addColumn({type: 'number', role: 'tooltip'});
+	data.addColumn({'type': 'string', 'role': 'tooltip', 'p': {'html': true}});
+	data.addColumn('number', '10x');
+	//data.addColumn({type: 'number', role: 'tooltip'});
+	data.addColumn({'type': 'string', 'role': 'tooltip', 'p': {'html': true}});
+	//data.addRows(myData);
+	//gameData[i].forEach(element  => data.addRows([[i+1,element]]));
+	for (var i = 0; i <= myData.length - 1; i++) {
+	    //gameData[i].forEach(element  => data.addRows([[i+1,element]]));
+		//data.addRows([gameData[i][0],gameData[i][3][0],gameData[i][1],gameData[i][3][1],gameData[i][1],gameData[i][3][2],gameData[i][1]]);
+		data.addRows([myData[i]]);
+		//console.log(`draw = ${gameData[i][2]} `)
+	}
+	var options = {
+        chart: {
+			title: 'Box Office Earnings in First Two Weeks of Opening',
+			subtitle: 'in millions of dollars (USD)'
+		},
+		//tooltip: { trigger: 'focus' },
+        tooltip: { isHtml: true },
+        width: 900,
+        height: 500,
+        hAxis: { format:''},
+        vAxis: { format:''},
+        axes: {
+			x: {
+				0: {side: 'top'}
+			}
+		}
+	};
+	
+	var chart = new google.visualization.LineChart(document.getElementById('line_top_x'));
+	chart.draw(data, options);
+	//chart.draw(data, google.charts.Line.convertOptions(options));
+}
+
+function createTip(gNum, gBust, gHash, gBal) {
+  return '<div style="padding:5px 5px 5px 5px;">' +
+      '<table class="medals_layout">' + '<tr>' +
+	  '<td><b>' + gNum + '</b></td>' + '</tr>' + '<tr>' +
+      '<td><b>' + gBust + '</b></td>' + '</tr>' + '<tr>' +
+      '<td><b>' + gHash + '</b></td>' + '</tr>' + '<tr>' +
+      '<td><b>' + gBal + '</b></td>' + '</tr>' + '</table>' + '</div>';
+}
+
+  </script>
+  </head>
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+  <div id="line_top_x"></div>
 </body>
 </html>
